@@ -34,5 +34,6 @@
 	},
 	"remoteUser": "ubuntu",
 	"containerUser": "ubuntu",
-	"updateRemoteUserUID": true
+	"updateRemoteUserUID": true,
+	"postStartCommand": "bear make -j 8"
 }
