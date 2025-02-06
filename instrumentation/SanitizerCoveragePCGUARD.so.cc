@@ -268,7 +268,6 @@ PreservedAnalyses ModuleSanitizerCoverageAFL::run(Module                &M,
   };
 
 
-  printf("BB count: %u\n", bb_count);
   if (ModuleSancov.instrumentModule(M, DTCallback, PDTCallback))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -504,6 +503,7 @@ bool ModuleSanitizerCoverageAFL::instrumentModule(
 
   }
 
+  printf("BB count: %u\n", bb_count);
   return true;
 
 }
@@ -1262,6 +1262,7 @@ void ModuleSanitizerCoverageAFL::InjectCoverageAtBlock(Function   &F,
 
     uint32_t bb_byte_index = bb_count / 8;
     uint32_t bb_bit_index = bb_count % 8;
+    bb_count++;
 
     Constant *BBMapIndex = ConstantInt::get(IRB.getInt32Ty(), bb_byte_index);
 
