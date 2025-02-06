@@ -10,6 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/Support/AtomicOrdering.h>
+#include <cstdint>
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -210,7 +215,8 @@ class ModuleSanitizerCoverageAFL
   GlobalVariable *AFLMapPtr = NULL;
   ConstantInt    *One = NULL;
   ConstantInt    *Zero = NULL;
-
+  GlobalVariable *AFLBBMapPtr = NULL;
+  uint32_t        bb_count = 0;
 };
 
 }  // namespace
@@ -261,6 +267,8 @@ PreservedAnalyses ModuleSanitizerCoverageAFL::run(Module                &M,
 
   };
 
+
+  printf("BB count: " + bb_count + "\n");
   if (ModuleSancov.instrumentModule(M, DTCallback, PDTCallback))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -397,6 +405,9 @@ bool ModuleSanitizerCoverageAFL::instrumentModule(
   AFLMapPtr =
       new GlobalVariable(M, PointerType::get(Int8Ty, 0), false,
                          GlobalValue::ExternalLinkage, 0, "__afl_area_ptr");
+  AFLBBMapPtr =
+      new GlobalVariable(M, PointerType::get(Int8Ty, 0), false,
+                         GlobalValue::ExternalLinkage, 0, "__afl_bb_map_ptr");
   One = ConstantInt::get(IntegerType::getInt8Ty(Ctx), 1);
   Zero = ConstantInt::get(IntegerType::getInt8Ty(Ctx), 0);
 
@@ -1249,14 +1260,26 @@ void ModuleSanitizerCoverageAFL::InjectCoverageAtBlock(Function   &F,
     LoadInst *CurLoc = IRB.CreateLoad(IRB.getInt32Ty(), GuardPtr);
     ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(CurLoc);
 
+    uint32_t bb_byte_index = bb_count / 8;
+    uint32_t bb_bit_index = bb_count % 8;
+
+    ConstantInt *BBMapIndex = ConstantInt::get(IRB.getInt32Ty(), bb_byte_index);
+
     /* Load SHM pointer */
 
     LoadInst *MapPtr = IRB.CreateLoad(PointerType::get(Int8Ty, 0), AFLMapPtr);
     ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(MapPtr);
 
+    LoadInst *BBMapPtr = IRB.CreateLoad(PointerType::get(Int8Ty, 0), AFLBBMapPtr);
+    ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(BBMapPtr);
+
     /* Load counter for CurLoc */
 
     Value *MapPtrIdx = IRB.CreateGEP(Int8Ty, MapPtr, CurLoc);
+
+    Value *BBMapPtrIdx = IRB.CreateGEP(Int8Ty, BBMapPtr, BBIndex);
+
+    ConstantInt bb_mask = ConstantInt::get(Int8Ty, 1 << bb_bit_index);
 
     if (use_threadsafe_counters) {
 
@@ -1265,15 +1288,26 @@ void ModuleSanitizerCoverageAFL::InjectCoverageAtBlock(Function   &F,
                           llvm::MaybeAlign(1),
 #endif
                           llvm::AtomicOrdering::Monotonic);
+      
+      IRB.CreateAtomicRMW(llvm::AtomicRMWInst::BinOp::Or, BBMapPtrIdx,
+                          bb_mask,
+#if LLVM_VERSION_MAJOR >= 13
+                          llvm::MaybeAlign(1),
+#endif  
+                          llvm::AtomicOrdering::Monotonic);
 
     } else {
 
       LoadInst *Counter = IRB.CreateLoad(IRB.getInt8Ty(), MapPtrIdx);
+      LoadInst *BBFlag = IRB.CreateLoad(IRB.getInt8Ty(), BBMapPtrIdx);
+
+      ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(Counter);
       ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(Counter);
 
       /* Update bitmap */
 
       Value *Incr = IRB.CreateAdd(Counter, One);
+      Value *NewFlag = IRB.CreateOr(BBFlag, bb_mask);
 
       if (skip_nozero == NULL) {
 
@@ -1284,8 +1318,9 @@ void ModuleSanitizerCoverageAFL::InjectCoverageAtBlock(Function   &F,
       }
 
       StoreInst *StoreCtx = IRB.CreateStore(Incr, MapPtrIdx);
+      StoreInst *StoreFlag = IRB.CreateStore(NewFlag, BBMapPtrIdx);
       ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(StoreCtx);
-
+      ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(StoreFlag);
     }
 
     // done :)
