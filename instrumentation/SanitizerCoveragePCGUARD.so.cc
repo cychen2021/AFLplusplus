@@ -15,6 +15,8 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/Support/AtomicOrdering.h>
 #include <cstdint>
+#include <utility>
+#include <vector>
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -137,6 +139,12 @@ using DomTreeCallback = function_ref<const DominatorTree *(Function &F)>;
 using PostDomTreeCallback =
     function_ref<const PostDominatorTree *(Function &F)>;
 
+struct SourceLoc {
+  StringRef file;
+  uint32_t line;
+  uint32_t col;
+};
+
 class ModuleSanitizerCoverageAFL
     : public PassInfoMixin<ModuleSanitizerCoverageAFL> {
 
@@ -217,6 +225,7 @@ class ModuleSanitizerCoverageAFL
   ConstantInt    *Zero = NULL;
   GlobalVariable *AFLBBMapPtr = NULL;
   uint32_t        bb_count = 0;
+  std::vector<std::pair<uint32_t, SourceLoc>> bb_locs;
 };
 
 }  // namespace
@@ -504,6 +513,12 @@ bool ModuleSanitizerCoverageAFL::instrumentModule(
   }
 
   printf("BB count: %u\n", bb_count);
+  for (auto &bb_loc : bb_locs) {
+
+    printf("BB %u: %s:%u:%u\n", bb_loc.first, bb_loc.second.file.str().c_str(),
+           bb_loc.second.line, bb_loc.second.col);
+
+  }
   return true;
 
 }
@@ -1262,6 +1277,15 @@ void ModuleSanitizerCoverageAFL::InjectCoverageAtBlock(Function   &F,
 
     uint32_t bb_byte_index = bb_count / 8;
     uint32_t bb_bit_index = bb_count % 8;
+
+    DebugLoc Loc = IP->getDebugLoc();
+    if (Loc) {
+      uint32_t Line = Loc.getLine();
+      uint32_t Col = Loc.getCol();
+      StringRef File = Loc.get()->getFilename();
+      bb_locs.push_back(std::make_pair(bb_count, SourceLoc{.file = File, .line = Line, .col = Col,}));
+    }
+
     bb_count++;
 
     Constant *BBMapIndex = ConstantInt::get(IRB.getInt32Ty(), bb_byte_index);
