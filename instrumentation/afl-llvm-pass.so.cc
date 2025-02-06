@@ -1112,6 +1112,8 @@ bool AFLCoverage::runOnModule(Module &M) {
 
   }
 
+  printf("Basic block num: %u\n", bb_index);
+
 #if LLVM_VERSION_MAJOR >= 11                        /* use new pass manager */
   return PreservedAnalyses();
 #else

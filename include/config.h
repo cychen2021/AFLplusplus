@@ -478,8 +478,10 @@
 #define MAP_SIZE (1U << MAP_SIZE_POW2)
 #if MAP_SIZE <= 2097152
   #define MAP_INITIAL_SIZE (2 << 20)  // = 2097152
+  #define BB_MAP_SIZE (2 << 20)
 #else
   #define MAP_INITIAL_SIZE MAP_SIZE
+   #define BB_MAP_SIZE MAP_SIZE
 #endif
 
 /* Maximum allocator request size (keep well under INT_MAX): */

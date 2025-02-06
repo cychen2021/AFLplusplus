@@ -102,10 +102,14 @@ extern ssize_t _kern_write(int fd, off_t pos, const void *buffer,
 char *strcasestr(const char *haystack, const char *needle);
 
 static u8  __afl_area_initial[MAP_INITIAL_SIZE];
+static u8  __afl_bb_map_initial[BB_MAP_SIZE];
 static u8 *__afl_area_ptr_dummy = __afl_area_initial;
 static u8 *__afl_area_ptr_backup = __afl_area_initial;
+static u8 *__afl_bb_map_ptr_dummy = __afl_bb_map_initial;
+static u8 *__afl_bb_map_ptr_backup = __afl_bb_map_initial;
 
 u8        *__afl_area_ptr = __afl_area_initial;
+u8        *__afl_bb_map_ptr = __afl_bb_map_initial;
 u8        *__afl_dictionary;
 u8        *__afl_fuzz_ptr;
 static u32 __afl_fuzz_len_dummy;
@@ -113,9 +117,11 @@ u32       *__afl_fuzz_len = &__afl_fuzz_len_dummy;
 int        __afl_sharedmem_fuzzing __attribute__((weak));
 
 u32 __afl_final_loc;
+u32 __afl_bb_num = BB_MAP_SIZE;
 u32 __afl_map_size = MAP_SIZE;
 u32 __afl_dictionary_len;
-u64 __afl_map_addr;
+u64 __afl_map_addr = 0;
+u64 __afl_bb_map_addr;
 u32 __afl_first_final_loc;
 u32 __afl_old_forkserver;
 
@@ -352,9 +358,18 @@ static void __afl_map_shm(void) {
 
   // if we are not running in afl ensure the map exists
   if (!__afl_area_ptr) { __afl_area_ptr = __afl_area_ptr_dummy; }
+  if (!__afl_bb_map_ptr) { __afl_bb_map_ptr = __afl_bb_map_ptr_dummy; }
 
   char *id_str = getenv(SHM_ENV_VAR);
 
+  char *bb_map_size_env;
+  u32   bb_map_size_val = 0;
+  if ((bb_map_size_env = getenv("AFL_BB_MAP_SIZE")) != NULL) { 
+    bb_map_size_val = atoi(bb_map_size_env); 
+  } else {
+    fprintf(stderr, "Error: AFL_BB_MAP_SIZE is not set\n");
+  }
+  __afl_bb_num = bb_map_size_val;
   if (__afl_final_loc) {
 
     __afl_map_size = __afl_final_loc + 1;  // as we count starting 0
@@ -615,7 +630,11 @@ static void __afl_map_shm(void) {
 
   }  // else: nothing to be done
 
+  __afl_bb_map_ptr = (u8 *)mmap((void *)__afl_bb_map_addr, (__afl_bb_num + 7) / 8, PROT_READ | PROT_WRITE,
+                                MAP_FIXED_NOREPLACE | MAP_SHARED  | MAP_ANONYMOUS, -1, 0);
+
   __afl_area_ptr_backup = __afl_area_ptr;
+  __afl_bb_map_ptr_backup = __afl_bb_map_ptr;
 
   if (__afl_debug) {
 

@@ -4,6 +4,7 @@
   "__afl_already_initialized_second";
   "__afl_already_initialized_shm";
   "__afl_area_ptr";
+  "__afl_bb_map_ptr";
   "__afl_auto_early";
   "__afl_auto_first";
   "__afl_auto_init";
@@ -21,6 +22,7 @@
   "__afl_fuzz_ptr";
   "__afl_manual_init";
   "__afl_map_addr";
+  "__afl_bb_map_addr";
   "__afl_persistent_loop";
   "__afl_prev_caller";
   "__afl_prev_ctx";
