@@ -84,6 +84,7 @@ static u32 tcnt, highest;              /* tuple content information         */
 static u32 in_len;                     /* Input data length                 */
 
 static u32 map_size = MAP_SIZE, timed_out = 0;
+static u32 bb_map_size = BB_MAP_SIZE;
 
 static bool quiet_mode,                /* Hide non-essential messages?      */
     edges_only,                        /* Ignore hit counts?                */
@@ -1401,7 +1402,7 @@ int main(int argc, char **argv_orig, char **envp) {
   fsrv->target_path = find_binary(argv[optind]);
 #endif
 
-  fsrv->trace_bits = afl_shm_init(&shm, map_size, 0);
+  fsrv->trace_bits = afl_shm_init(&shm, map_size, , 0);
 
   if (!quiet_mode) {
 
@@ -1540,7 +1541,7 @@ int main(int argc, char **argv_orig, char **envp) {
   shm_fuzz->cmplog_mode = 0;
   atexit(at_exit_handler);
 
-  u8 *map = afl_shm_init(shm_fuzz, MAX_FILE + sizeof(u32), 1);
+  u8 *map = afl_shm_init(shm_fuzz, MAX_FILE + sizeof(u32), bb_map_size, 1);
   shm_fuzz->shmemfuzz_mode = true;
   if (!map) { FATAL("BUG: Zero return from afl_shm_init."); }
 #ifdef USEMMAP
@@ -1597,7 +1598,7 @@ int main(int argc, char **argv_orig, char **envp) {
         afl_shm_deinit(&shm);
         afl_fsrv_kill(fsrv);
         fsrv->map_size = new_map_size;
-        fsrv->trace_bits = afl_shm_init(&shm, new_map_size, 0);
+        fsrv->trace_bits = afl_shm_init(&shm, new_map_size, bb_map_size, 0);
 
       }
 

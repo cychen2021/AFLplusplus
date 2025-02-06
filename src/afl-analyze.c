@@ -79,6 +79,7 @@ static u8  frida_mode;
 static u8  qemu_mode;
 static u8  cs_mode;
 static u32 map_size = MAP_SIZE;
+static u32 bb_map_size = BB_MAP_SIZE;
 
 static afl_forkserver_t fsrv = {0};   /* The forkserver                     */
 
@@ -1006,6 +1007,7 @@ int main(int argc, char **argv_orig, char **envp) {
   if (optind == argc || !in_file) { usage(argv[0]); }
 
   map_size = get_map_size();
+  bb_map_size = get_bb_map_size();
   fsrv.map_size = map_size;
 
   use_hex_offsets = !!get_afl_env("AFL_ANALYZE_HEX");
@@ -1037,7 +1039,7 @@ int main(int argc, char **argv_orig, char **envp) {
   fsrv.target_path = find_binary(argv[optind]);
 #endif
 
-  fsrv.trace_bits = afl_shm_init(&shm, map_size, 0);
+  fsrv.trace_bits = afl_shm_init(&shm, map_size, bb_map_size, 0);
   detect_file_args(argv + optind, fsrv.out_file, &use_stdin);
   signal(SIGALRM, kill_child);
 

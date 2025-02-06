@@ -654,7 +654,7 @@ void read_foreign_testcases(afl_state_t *afl, int first) {
         u32 len = write_to_testcase(afl, (void **)&mem, st.st_size, 1);
         fault = fuzz_run_target(afl, &afl->fsrv, afl->fsrv.exec_tmout);
         afl->syncing_party = foreign_name;
-        afl->queued_imported += save_if_interesting(afl, mem, len, fault);
+        afl->queued_imported += save_if_interesting(afl, mem, len, afl->fsrv.trace_bits + (afl->fsrv.map_size - afl->bb_map_size), afl->bb_map_size, fault);
         afl->syncing_party = 0;
         munmap(mem, st.st_size);
         close(fd);
@@ -2857,7 +2857,7 @@ void setup_testcase_shmem(afl_state_t *afl) {
   afl->shm_fuzz = ck_alloc(sizeof(sharedmem_t));
 
   // we need to set the non-instrumented mode to not overwrite the SHM_ENV_VAR
-  u8 *map = afl_shm_init(afl->shm_fuzz, MAX_FILE + sizeof(u32), 1);
+  u8 *map = afl_shm_init(afl->shm_fuzz, MAX_FILE + sizeof(u32), afl->bb_map_size, 1);
   afl->shm_fuzz->shmemfuzz_mode = 1;
 
   if (!map) { FATAL("BUG: Zero return from afl_shm_init."); }

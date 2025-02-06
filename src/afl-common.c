@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include "config.h"
 #include "forkserver.h"
 #ifndef _GNU_SOURCE
   #define _GNU_SOURCE
@@ -1353,6 +1354,29 @@ u8 *u_simplestring_time_diff(u8 *buf, u64 cur_ms, u64 event_ms) {
 
   return buf;
 
+}
+
+u32 get_bb_map_size(void) {
+  uint32_t map_size = BB_MAP_SIZE;
+  char    *ptr;
+
+  if ((ptr = getenv("AFL_BB_MAP_SIZE"))) {
+
+    map_size = atoi(ptr);
+    if (!map_size || map_size > (1 << 29)) {
+
+      FATAL("illegal AFL_BB_MAP_SIZE %u, must be between %u and %u", map_size,
+            64U, 1U << 29);
+
+    }
+
+    if (map_size % 64) { map_size = (((map_size >> 6) + 1) << 6); }
+
+  } else {
+    FATAL("AFL_BB_MAP_SIZE not set");
+  }
+
+  return map_size;
 }
 
 /* Reads the map size from ENV */

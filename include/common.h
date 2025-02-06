@@ -141,6 +141,7 @@ u8 *u_stringify_time_diff(u8 *buf, u64 cur_ms, u64 event_ms);
 
 /* Reads the map size from ENV */
 u32 get_map_size(void);
+u32 get_bb_map_size(void);
 
 /* create a stream file */
 FILE *create_ffile(u8 *fn);

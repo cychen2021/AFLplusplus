@@ -848,6 +848,8 @@ typedef struct afl_state {
 
   struct skipdet_global *skipdet_g;
 
+  u32 bb_map_size;                      /* map size used by the target      */
+
 #ifdef INTROSPECTION
   char  mutation[8072];
   char  m_tmp[4096];
@@ -1195,7 +1197,7 @@ void minimize_bits(afl_state_t *, u8 *, u8 *);
 #ifndef SIMPLE_FILES
 u8 *describe_op(afl_state_t *, u8, size_t);
 #endif
-u8 save_if_interesting(afl_state_t *, void *, u32, u8);
+u8 save_if_interesting(afl_state_t *, void *, u32, void *, u32, u8);
 u8 has_new_bits(afl_state_t *, u8 *);
 u8 has_new_bits_unclassified(afl_state_t *, u8 *);
 #ifndef AFL_SHOWMAP

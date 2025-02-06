@@ -101,8 +101,8 @@ extern ssize_t _kern_write(int fd, off_t pos, const void *buffer,
 
 char *strcasestr(const char *haystack, const char *needle);
 
-static u8  __afl_area_initial[MAP_INITIAL_SIZE];
-static u8  __afl_bb_map_initial[BB_MAP_SIZE];
+static u8  __afl_area_initial[MAP_INITIAL_SIZE + BB_MAP_SIZE];
+#define __afl_bb_map_initial ((u8 *) (__afl_area_initial + MAP_INITIAL_SIZE));
 static u8 *__afl_area_ptr_dummy = __afl_area_initial;
 static u8 *__afl_area_ptr_backup = __afl_area_initial;
 static u8 *__afl_bb_map_ptr_dummy = __afl_bb_map_initial;
@@ -566,6 +566,7 @@ static void __afl_map_shm(void) {
     }
 
     __afl_area_ptr = (u8 *)shmat(shm_id, (void *)__afl_map_addr, 0);
+    __afl_bb_map_ptr = __afl_area_ptr + __afl_map_size;
 
     /* Whooooops. */
 
@@ -595,6 +596,8 @@ static void __afl_map_shm(void) {
     __afl_area_ptr = (u8 *)mmap(
         (void *)__afl_map_addr, __afl_map_size, PROT_READ | PROT_WRITE,
         MAP_FIXED_NOREPLACE | MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    __afl_bb_map_ptr = (u8 *)mmap((void *)__afl_bb_map_addr, (__afl_bb_num + 7) / 8, PROT_READ | PROT_WRITE,
+                                  MAP_FIXED_NOREPLACE | MAP_SHARED  | MAP_ANONYMOUS, -1, 0);
 
     if (__afl_area_ptr == MAP_FAILED) {
 
@@ -619,6 +622,9 @@ static void __afl_map_shm(void) {
     __afl_area_ptr_dummy = (u8 *)malloc(__afl_map_size);
     __afl_area_ptr = __afl_area_ptr_dummy;
 
+    __afl_bb_map_ptr_dummy = (u8 *)malloc((__afl_bb_num + 7) / 8);
+    __afl_bb_map_ptr = __afl_bb_map_ptr_dummy;
+
     if (!__afl_area_ptr_dummy) {
 
       fprintf(stderr,
@@ -629,9 +635,6 @@ static void __afl_map_shm(void) {
     }
 
   }  // else: nothing to be done
-
-  __afl_bb_map_ptr = (u8 *)mmap((void *)__afl_bb_map_addr, (__afl_bb_num + 7) / 8, PROT_READ | PROT_WRITE,
-                                MAP_FIXED_NOREPLACE | MAP_SHARED  | MAP_ANONYMOUS, -1, 0);
 
   __afl_area_ptr_backup = __afl_area_ptr;
   __afl_bb_map_ptr_backup = __afl_bb_map_ptr;
@@ -729,7 +732,6 @@ static void __afl_map_shm(void) {
 #endif
 
     __afl_cmp_map_backup = __afl_cmp_map;
-
     if (!__afl_cmp_map || __afl_cmp_map == (void *)-1) {
 
       perror("shmat for cmplog");

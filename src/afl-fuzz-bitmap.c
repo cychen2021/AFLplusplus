@@ -24,6 +24,8 @@
  */
 
 #include "afl-fuzz.h"
+#include "debug.h"
+#include "types.h"
 #include <limits.h>
 #if !defined NAME_MAX
   #define NAME_MAX _XOPEN_NAME_MAX
@@ -457,7 +459,7 @@ void write_crash_readme(afl_state_t *afl) {
    entry is saved, 0 otherwise. */
 
 u8 __attribute__((hot)) save_if_interesting(afl_state_t *afl, void *mem,
-                                            u32 len, u8 fault) {
+                                            u32 len, void* bb_map, u32 bb_map_size, u8 fault) {
 
   if (unlikely(len == 0)) { return 0; }
 
@@ -480,9 +482,11 @@ u8 __attribute__((hot)) save_if_interesting(afl_state_t *afl, void *mem,
 
   u8  fn[PATH_MAX];
   u8 *queue_fn = "";
+  u8 *bb_map_fn = "";
   u8  new_bits = 0, keeping = 0, res, classified = 0, is_timeout = 0,
      need_hash = 1;
   s32 fd;
+  s32 bb_fd;
   u64 cksum = 0;
 
   /* Update path frequency. */
@@ -539,12 +543,21 @@ u8 __attribute__((hot)) save_if_interesting(afl_state_t *afl, void *mem,
                       NAME_MAX - strlen("id:000000,")),
           afl->file_extension ? "." : "",
           afl->file_extension ? (const char *)afl->file_extension : "");
+      bb_map_fn = alloc_printf(
+          "%s/bbmap/id:%06u,%s%s%s", afl->out_dir, afl->queued_items,
+          describe_op(afl, new_bits + is_timeout,
+                      NAME_MAX - strlen("id:000000,")),
+          afl->file_extension ? "." : "",
+          afl->file_extension ? (const char *)afl->file_extension : "");
 
     } else {
 
       const char *hex = sha1_hex(mem, len);
       queue_fn = alloc_printf(
           "%s/queue/%s%s%s", afl->out_dir, hex, afl->file_extension ? "." : "",
+          afl->file_extension ? (const char *)afl->file_extension : "");
+      bb_map_fn = alloc_printf(
+          "%s/bbmap/%s%s%s", afl->out_dir, hex, afl->file_extension ? "." : "",
           afl->file_extension ? (const char *)afl->file_extension : "");
       ck_free((char *)hex);
 
@@ -564,6 +577,11 @@ u8 __attribute__((hot)) save_if_interesting(afl_state_t *afl, void *mem,
       ck_write(fd, mem, len, queue_fn);
       close(fd);
 
+    }
+
+    bb_fd = permissive_create(afl, bb_map_fn);
+    if (likely(bb_fd >= 0)) {
+      ck_write(bb_fd, bb_map, bb_map_size, bb_map_fn);
     }
 
     add_to_queue(afl, queue_fn, len, 0);

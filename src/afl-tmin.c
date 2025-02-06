@@ -71,6 +71,8 @@ static u32 in_len,                     /* Input data length                 */
     missed_paths,                      /* Misses due to exec path diffs     */
     map_size = MAP_SIZE;
 
+static u32 bb_map_size = BB_MAP_SIZE;
+
 static u64 orig_cksum;                 /* Original checksum                 */
 
 static u8 crash_mode,                  /* Crash-centric mode?               */
@@ -850,6 +852,7 @@ int main(int argc, char **argv_orig, char **envp) {
   fsrv = &fsrv_var;
   afl_fsrv_init(fsrv);
   map_size = get_map_size();
+  bb_
   fsrv->map_size = map_size;
 
   doc_path = access(DOC_PATH, F_OK) ? "docs" : DOC_PATH;
@@ -1129,7 +1132,7 @@ int main(int argc, char **argv_orig, char **envp) {
   fsrv->target_path = find_binary(argv[optind]);
 #endif
 
-  fsrv->trace_bits = afl_shm_init(&shm, map_size, 0);
+  fsrv->trace_bits = afl_shm_init(&shm, map_size, bb_map_size, 0);
   detect_file_args(argv + optind, out_file, &fsrv->use_stdin);
   signal(SIGALRM, kill_child);
 
@@ -1226,7 +1229,7 @@ int main(int argc, char **argv_orig, char **envp) {
 
   /* initialize cmplog_mode */
   shm_fuzz->cmplog_mode = 0;
-  u8 *map = afl_shm_init(shm_fuzz, MAX_FILE + sizeof(u32), 1);
+  u8 *map = afl_shm_init(shm_fuzz, MAX_FILE + sizeof(u32), bb_map_size, 1);
   shm_fuzz->shmemfuzz_mode = 1;
   if (!map) { FATAL("BUG: Zero return from afl_shm_init."); }
 #ifdef USEMMAP
@@ -1269,7 +1272,7 @@ int main(int argc, char **argv_orig, char **envp) {
         afl_shm_deinit(&shm);
         afl_fsrv_kill(fsrv);
         fsrv->map_size = new_map_size;
-        fsrv->trace_bits = afl_shm_init(&shm, new_map_size, 0);
+        fsrv->trace_bits = afl_shm_init(&shm, new_map_size, bb_map_size, 0);
         afl_fsrv_start(fsrv, use_argv, &stop_soon,
                        (get_afl_env("AFL_DEBUG_CHILD") ||
                         get_afl_env("AFL_DEBUG_CHILD_OUTPUT"))
