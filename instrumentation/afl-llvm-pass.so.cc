@@ -19,8 +19,6 @@
 
  */
 
-#include <llvm/IR/Constants.h>
-#include <cstdint>
 #define AFL_LLVM_PASS
 
 #include "config.h"
@@ -106,7 +104,7 @@ class AFLCoverage : public ModulePass {
   uint32_t    function_minimum_size = 1;
   const char *ctx_str = NULL, *caller_str = NULL, *skip_nozero = NULL;
   const char *use_threadsafe_counters = nullptr;
-  uint32_t    bb_index = 0;
+
 };
 
 }  // namespace
@@ -406,9 +404,6 @@ bool AFLCoverage::runOnModule(Module &M) {
   GlobalVariable *AFLMapPtr =
       new GlobalVariable(M, PointerType::get(Int8Ty, 0), false,
                          GlobalValue::ExternalLinkage, 0, "__afl_area_ptr");
-  GlobalVariable *BBMapPtr =
-      new GlobalVariable(M, PointerType::get(Int8Ty, 0), false,
-                         GlobalValue::ExternalLinkage, 0, "__afl_bb_map_ptr");
   GlobalVariable *AFLPrevLoc;
   GlobalVariable *AFLPrevCaller;
   GlobalVariable *AFLContext = NULL;
@@ -778,21 +773,6 @@ bool AFLCoverage::runOnModule(Module &M) {
 #endif
             MapPtr, IRB.CreateXor(PrevLocTrans, CurLoc));
 
-
-      // ConstantInt *LocIdx = ConstantInt::get(Int32Ty, instrument_index);
-      // instrument_index++;
-      uint32_t bb_index_byte_offset = bb_index >> 3;
-      uint32_t bb_index_offset = bb_index & 7;
-      uint8_t  bb_index_mask = 1 << bb_index_offset;
-      ConstantInt *BBIndexMask = ConstantInt::get(Int8Ty, bb_index_mask);
-      bb_index++;
-
-      Value *BBMapPtrIdx = IRB.CreateGEP(
-#if LLVM_VERSION_MAJOR >= 14
-          Int8Ty,
-#endif
-          BBMapPtr, ConstantInt::get(Int32Ty, bb_index_byte_offset));
-
       /* Update bitmap */
 
       if (use_threadsafe_counters) {                              /* Atomic */
@@ -807,12 +787,6 @@ bool AFLCoverage::runOnModule(Module &M) {
                 }
 
         */
-
-        IRB.CreateAtomicRMW(llvm::AtomicRMWInst::BinOp::Or, BBMapPtrIdx, BBIndexMask, 
-#if LLVM_VERSION_MAJOR >= 13
-                            llvm::MaybeAlign(1),
-#endif
-                            llvm::AtomicOrdering::Monotonic);
 
       } else {
 
@@ -853,16 +827,6 @@ bool AFLCoverage::runOnModule(Module &M) {
         IRB.CreateStore(Incr, MapPtrIdx)
             ->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
 
-        LoadInst *BBMapByte = IRB.CreateLoad(
-#if LLVM_VERSION_MAJOR >= 14
-            IRB.getInt8Ty(),
-#endif
-            BBMapPtrIdx);
-        BBMapByte->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
-
-        Value *BBMapByteOr = IRB.CreateOr(BBMapByte, BBIndexMask);
-        IRB.CreateStore(BBMapByteOr, BBMapPtrIdx)
-            ->setMetadata(M.getMDKindID("nosanitize"), MDNode::get(C, None));
       }                                                  /* non atomic case */
 
       /* Update prev_loc history vector (by placing cur_loc at the head of the
@@ -1111,8 +1075,6 @@ bool AFLCoverage::runOnModule(Module &M) {
     }
 
   }
-
-  printf("Basic block num: %u\n", bb_index);
 
 #if LLVM_VERSION_MAJOR >= 11                        /* use new pass manager */
   return PreservedAnalyses();
