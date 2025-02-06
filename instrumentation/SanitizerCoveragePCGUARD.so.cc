@@ -15,6 +15,10 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/Support/AtomicOrdering.h>
 #include <cstdint>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <string>
 #include <utility>
 #include <vector>
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
@@ -363,6 +367,18 @@ Function *ModuleSanitizerCoverageAFL::CreateInitCallsForSections(
 bool ModuleSanitizerCoverageAFL::instrumentModule(
     Module &M, DomTreeCallback DTCallback, PostDomTreeCallback PDTCallback) {
 
+  std::filesystem::path bb_record = std::filesystem::temp_directory_path() / "bb_record";
+
+  if (std::filesystem::exists(bb_record)) {
+    std::ifstream ifs(bb_record);
+    std::string content;
+    std::getline(ifs, content);
+    bb_count = std::stoi(content);
+  } else {
+    std::ofstream ofs(bb_record);
+    ofs << 0;
+  }
+
   setvbuf(stdout, NULL, _IONBF, 0);
 
   if (getenv("AFL_DEBUG")) { debug = 1; }
@@ -513,10 +529,32 @@ bool ModuleSanitizerCoverageAFL::instrumentModule(
   }
 
   printf("BB count: %u\n", bb_count);
-  for (auto &bb_loc : bb_locs) {
+  std::ofstream bb_record_ofs(bb_record);
+  bb_record_ofs << bb_count;
 
-    printf("BB %u: %s:%u:%u\n", bb_loc.first, bb_loc.second.file.str().c_str(),
-           bb_loc.second.line, bb_loc.second.col);
+  const char* bb_loc_file = std::getenv("BB_LOC_FILE");
+  bool use_stdout = bb_loc_file == nullptr || std::string(bb_loc_file) == "";
+  if (use_stdout) {
+    for (auto &bb_loc : bb_locs) {
+
+      printf("BB %u: %s:%u:%u\n", bb_loc.first, bb_loc.second.file.str().c_str(),
+            bb_loc.second.line, bb_loc.second.col);
+
+    }
+  } else {
+    if (!std::filesystem::exists(bb_loc_file)) {
+      std::ofstream bb_loc_ofs(bb_loc_file);
+      bb_loc_ofs << "";
+      bb_loc_ofs.close();
+    }
+
+    std::ofstream bb_loc_ofs(bb_loc_file, std::ios::app);
+    for (auto &bb_loc : bb_locs) {
+
+      bb_loc_ofs << "BB " << bb_loc.first << ": " << bb_loc.second.file.str() << ":"
+          << bb_loc.second.line << ":" << bb_loc.second.col << std::endl;
+
+    }
 
   }
   return true;
