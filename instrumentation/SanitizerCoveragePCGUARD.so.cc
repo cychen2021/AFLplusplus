@@ -268,7 +268,7 @@ PreservedAnalyses ModuleSanitizerCoverageAFL::run(Module                &M,
   };
 
 
-  printf("BB count: " + bb_count + "\n");
+  printf("BB count: %u\n", bb_count);
   if (ModuleSancov.instrumentModule(M, DTCallback, PDTCallback))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -1263,7 +1263,7 @@ void ModuleSanitizerCoverageAFL::InjectCoverageAtBlock(Function   &F,
     uint32_t bb_byte_index = bb_count / 8;
     uint32_t bb_bit_index = bb_count % 8;
 
-    ConstantInt *BBMapIndex = ConstantInt::get(IRB.getInt32Ty(), bb_byte_index);
+    Constant *BBMapIndex = ConstantInt::get(IRB.getInt32Ty(), bb_byte_index);
 
     /* Load SHM pointer */
 
@@ -1277,9 +1277,9 @@ void ModuleSanitizerCoverageAFL::InjectCoverageAtBlock(Function   &F,
 
     Value *MapPtrIdx = IRB.CreateGEP(Int8Ty, MapPtr, CurLoc);
 
-    Value *BBMapPtrIdx = IRB.CreateGEP(Int8Ty, BBMapPtr, BBIndex);
+    Value *BBMapPtrIdx = IRB.CreateGEP(Int8Ty, BBMapPtr, BBMapIndex);
 
-    ConstantInt bb_mask = ConstantInt::get(Int8Ty, 1 << bb_bit_index);
+    Constant *bb_mask = ConstantInt::get(Int8Ty, 1 << bb_bit_index);
 
     if (use_threadsafe_counters) {
 
