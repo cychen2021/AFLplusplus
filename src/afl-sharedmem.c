@@ -24,7 +24,6 @@
 
  */
 
-#include <cstddef>
 #define AFL_MAIN
 
 #ifdef __ANDROID__

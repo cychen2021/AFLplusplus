@@ -852,7 +852,7 @@ int main(int argc, char **argv_orig, char **envp) {
   fsrv = &fsrv_var;
   afl_fsrv_init(fsrv);
   map_size = get_map_size();
-  bb_
+  bb_map_size = get_bb_map_size();
   fsrv->map_size = map_size;
 
   doc_path = access(DOC_PATH, F_OK) ? "docs" : DOC_PATH;
