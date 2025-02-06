@@ -35,5 +35,5 @@
 	"remoteUser": "ubuntu",
 	"containerUser": "ubuntu",
 	"updateRemoteUserUID": true,
-	"postStartCommand": "/usr/bin/bear -- /usr/bin/make -j 8 --dry-run"
+	"postStartCommand": "/usr/bin/bear -- /usr/bin/make -j 8"
 }
