@@ -44,7 +44,6 @@ __attribute__((weak)) void __sanitizer_symbolize_pc(void *, const char *fmt,
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
-#include <assert.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <limits.h>
@@ -592,10 +591,10 @@ static void __afl_map_shm(void) {
   } else if ((!__afl_area_ptr || __afl_area_ptr == __afl_area_initial) &&
 
              __afl_map_addr) {
-
     __afl_area_ptr = (u8 *)mmap(
         (void *)__afl_map_addr, __afl_map_size, PROT_READ | PROT_WRITE,
         MAP_FIXED_NOREPLACE | MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    __afl_bb_map_addr = ((u64) __afl_area_ptr) + __afl_map_size;
     __afl_bb_map_ptr = (u8 *)mmap((void *)__afl_bb_map_addr, (__afl_bb_num + 7) / 8, PROT_READ | PROT_WRITE,
                                   MAP_FIXED_NOREPLACE | MAP_SHARED  | MAP_ANONYMOUS, -1, 0);
 

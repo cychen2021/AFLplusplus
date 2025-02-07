@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <assert.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
@@ -1340,9 +1341,9 @@ void ModuleSanitizerCoverageAFL::InjectCoverageAtBlock(Function   &F,
 
     Value *MapPtrIdx = IRB.CreateGEP(Int8Ty, MapPtr, CurLoc);
 
-    Value *BBMapPtrIdx = IRB.CreateGEP(Int8Ty, BBMapPtr, BBMapIndex);
+    Value *BBMapPtrIdx = IRB.CreateGEP(Int8Ty, BBMapPtr, {BBMapIndex});
 
-    Constant *bb_mask = ConstantInt::get(Int8Ty, 1 << bb_bit_index);
+    Constant *BBMask = ConstantInt::get(Int8Ty, 1 << bb_bit_index);
 
     if (use_threadsafe_counters) {
 
@@ -1353,24 +1354,23 @@ void ModuleSanitizerCoverageAFL::InjectCoverageAtBlock(Function   &F,
                           llvm::AtomicOrdering::Monotonic);
       
       IRB.CreateAtomicRMW(llvm::AtomicRMWInst::BinOp::Or, BBMapPtrIdx,
-                          bb_mask,
+                          BBMask,
 #if LLVM_VERSION_MAJOR >= 13
                           llvm::MaybeAlign(1),
 #endif  
                           llvm::AtomicOrdering::Monotonic);
 
     } else {
-
       LoadInst *Counter = IRB.CreateLoad(IRB.getInt8Ty(), MapPtrIdx);
       LoadInst *BBFlag = IRB.CreateLoad(IRB.getInt8Ty(), BBMapPtrIdx);
 
       ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(Counter);
-      ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(Counter);
+      ModuleSanitizerCoverageAFL::SetNoSanitizeMetadata(BBFlag);
 
       /* Update bitmap */
 
       Value *Incr = IRB.CreateAdd(Counter, One);
-      Value *NewFlag = IRB.CreateOr(BBFlag, bb_mask);
+      Value *NewFlag = IRB.CreateOr(BBFlag, BBMask);
 
       if (skip_nozero == NULL) {
 

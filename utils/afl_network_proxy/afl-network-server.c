@@ -73,6 +73,7 @@ static u8 *buf2;
 static s32 in_len;
 static s32 buf2_len;
 static u32 map_size = MAP_SIZE;
+static u32 bb_map_size = BB_MAP_SIZE;
 
 static volatile u8 stop_soon;          /* Ctrl-C pressed?                   */
 
@@ -526,7 +527,7 @@ int main(int argc, char **argv_orig, char **envp) {
   check_environment_vars(envp);
 
   sharedmem_t shm = {0};
-  fsrv->trace_bits = afl_shm_init(&shm, map_size, 0);
+  fsrv->trace_bits = afl_shm_init(&shm, map_size, (bb_map_size + 7) / 8, 0);
 
   in_data = afl_realloc((void **)&in_data, 65536);
   if (unlikely(!in_data)) { PFATAL("Alloc"); }

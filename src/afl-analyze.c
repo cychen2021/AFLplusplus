@@ -1039,7 +1039,7 @@ int main(int argc, char **argv_orig, char **envp) {
   fsrv.target_path = find_binary(argv[optind]);
 #endif
 
-  fsrv.trace_bits = afl_shm_init(&shm, map_size, bb_map_size, 0);
+  fsrv.trace_bits = afl_shm_init(&shm, map_size, (bb_map_size + 7) / 8, 0);
   detect_file_args(argv + optind, fsrv.out_file, &use_stdin);
   signal(SIGALRM, kill_child);
 

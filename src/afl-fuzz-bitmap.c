@@ -24,6 +24,7 @@
  */
 
 #include "afl-fuzz.h"
+#include "assert.h"
 #include "debug.h"
 #include "types.h"
 #include <limits.h>

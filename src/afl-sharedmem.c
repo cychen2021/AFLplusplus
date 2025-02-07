@@ -140,7 +140,7 @@ void afl_shm_deinit(sharedmem_t *shm) {
    Returns a pointer to shm->map for ease of use.
 */
 
-u8 *afl_shm_init(sharedmem_t *shm, size_t map_size, size_t bb_map_size,
+u8 *afl_shm_init(sharedmem_t *shm, size_t map_size, size_t bb_map_size_in_byte,
                  unsigned char non_instrumented_mode) {
 
   shm->map_size = 0;
@@ -276,7 +276,7 @@ u8 *afl_shm_init(sharedmem_t *shm, size_t map_size, size_t bb_map_size,
 
   // for qemu+unicorn we have to increase by 8 to account for potential
   // compcov map overwrite
-  size_t total_map_size = map_size + bb_map_size;
+  size_t total_map_size = map_size + bb_map_size_in_byte;
   shm->shm_id =
       shmget(IPC_PRIVATE, total_map_size == MAP_SIZE ? total_map_size + 8 : total_map_size,
              IPC_CREAT | IPC_EXCL | DEFAULT_PERMISSION);

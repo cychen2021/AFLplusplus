@@ -33,6 +33,7 @@
 #endif
 
 #include "cmplog.h"
+#include <assert.h>
 
 #ifdef PROFILING
 u64 time_spent_working = 0;
@@ -873,8 +874,9 @@ void sync_fuzzers(afl_state_t *afl) {
 
         if (afl->stop_soon) { goto close_sync; }
 
+        u32 bb_map_byte_size = (afl->bb_map_size + 7) / 8;
         afl->syncing_party = sd_ent->d_name;
-        afl->queued_imported += save_if_interesting(afl, mem, new_len, afl->fsrv.trace_bits + (afl->fsrv.map_size - afl->bb_map_size), afl->bb_map_size, fault);
+        afl->queued_imported += save_if_interesting(afl, mem, new_len, afl->fsrv.trace_bits + (afl->fsrv.map_size - bb_map_byte_size), afl->bb_map_size, fault);
         show_stats(afl);
         afl->syncing_party = 0;
 
@@ -1224,7 +1226,9 @@ u8 __attribute__((hot)) common_fuzz_stuff(afl_state_t *afl, u8 *out_buf,
 
   /* This handles FAULT_ERROR for us: */
 
-  afl->queued_discovered += save_if_interesting(afl, out_buf, len, afl->fsrv.trace_bits + (afl->fsrv.map_size - afl->bb_map_size), afl->bb_map_size, fault);
+  u32 bb_map_byte_size = (afl->bb_map_size + 7) / 8;
+    assert(afl->bb_map_size > 0);
+  afl->queued_discovered += save_if_interesting(afl, out_buf, len, afl->fsrv.trace_bits + (afl->fsrv.map_size - bb_map_byte_size), afl->bb_map_size, fault);
 
   if (!(afl->stage_cur % afl->stats_update_freq) ||
       afl->stage_cur + 1 == afl->stage_max) {
