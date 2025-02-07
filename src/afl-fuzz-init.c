@@ -24,6 +24,7 @@
  */
 
 #include "afl-fuzz.h"
+#include "alloc-inl.h"
 #include "common.h"
 #include <limits.h>
 #include <string.h>
@@ -2240,6 +2241,10 @@ void setup_dirs_fds(afl_state_t *afl) {
     close(fd);
 
   }
+
+  tmp = alloc_printf("%s/bbmap", afl->out_dir);
+  if (mkdir(tmp, 0700)) { PFATAL("Unable to create '%s'", tmp); }
+  ck_free(tmp);
 
   /* Queue directory for any starting & discovered paths. */
 

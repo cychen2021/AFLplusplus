@@ -670,7 +670,6 @@ void read_afl_environment(afl_state_t *afl, char **envp) {
         if (strncmp(env, afl_environment_variables[i],
                     strlen(afl_environment_variables[i])) == 0 &&
             env[strlen(afl_environment_variables[i])] == '=') {
-
           match = 1;
 
         } else {

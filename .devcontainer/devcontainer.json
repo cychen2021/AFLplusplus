@@ -23,7 +23,8 @@
 				"ms-azuretools.vscode-docker",
 				"zeshuaro.vscode-python-poetry",
 				"jnoortheen.xonsh",
-				"ms-vscode.cpptools-extension-pack"
+				"ms-vscode.cpptools-extension-pack",
+				"QiaoJie.binary-viewer"
 			],
 			"settings": {
 				"clangd.path": "/usr/bin/clangd",
