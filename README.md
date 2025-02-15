@@ -8,6 +8,8 @@ To build the extended AFL++, you need the following dependencies:
 
 Then, run the following commands:
 ```bash
+export CC=clang
+export CXX=clang++
 make
 ```
 The compiled executables will be in the project root directory.
