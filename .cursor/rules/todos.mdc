@@ -1,0 +1,9 @@
+---
+description: TODOs
+globs: 
+alwaysApply: false
+---
+# TODOs
+
+- [ ] The modified AFL++ does not support multi-thread compilation yet, as the `/tmp/bb_count` will be incorrectly modifed if multiple compilation units are compiled simultaneously.
+- [ ] The `AFL_BB_MAP_SIZE` is always required, but the expected behavior should be opting out the extra basic block map recording functionality if this environment variable is not set.

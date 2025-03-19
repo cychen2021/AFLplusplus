@@ -1,0 +1,25 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Modifications over the original AFL++
+
+## Overview
+
+This modified version of AFL++ adds the functionality that tracks which test cases touching which line of code. Such information can be obtained by coverage analysis tools after the whole fuzzing process finished though. However, tracking during fuzzing can achieve less analysis time (you don't have to analyze every test cases all at once) and better convinience (you can get information of some test cases at some point of the fuzzing process, and compute incremental information of later generated test cases in the future).
+
+## Modification list
+
+The original version of AFL++ doesn't track of coverage status of every line, but keeps path hashes that sumarrizes execution paths. Our modification adds a bit map corresponding to each basic block in the program for each test case, and the bits in the bit map flags whether a basic block is covered or not. Specifically, our modifications include:
+1. We add `__afl_bb_map_addr` and `__afl_bb_map_ptr` in `dynamic_list.txt`, `frida_mode/include/instrument.h` to provide access to the basic block bit map for instrumented programs.
+2. We modified `afl_shm_init` declared in `include/sharedmem.h` to allocate an extra segment in the shared memory (following the original ones) to store the bit map. The third argument of type `size-t` is the size of the bit block map.
+3. We modify `instrumentation/SanitizerCoveragePCGUARD.so.cc` (the `ModuleSanitizerCoverageAFL::instrumentModule` function), `instrumentation/afl-compiler-rt.o.c` (the `__afl_map_shm` function) and `src/afl-analyze.c` to track the index of the currently instrumented basic block and instrument the instructions that update the bit map.
+4. Since a project may include multiple compilation units, we records the number of the basic blocks in `/tmp/bb_count` during instrumentation to accumulate the counts accross multiple compilation units.
+5. We modified the `save_if_insteresting ` function in `include/afl-fuzz.h` and `src/afl-fuzz-bitmap.c` to save the basic block bit map in extra while saving interesting test cases.
+6. The number of the basic blocks is passed through a new environment variable `AFL_BB_MAP_SIZE` in the `main` function in `src/afl-fuzz.c` before fuzzing.
+
+## Limitations
+
+See TODOs for limitations yet to resolve.
