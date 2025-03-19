@@ -3,7 +3,6 @@ description:
 globs: 
 alwaysApply: true
 ---
-
 # Modifications over the original AFL++
 
 ## Overview
