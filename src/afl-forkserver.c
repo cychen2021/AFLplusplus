@@ -252,7 +252,7 @@ void afl_fsrv_init(afl_forkserver_t *fsrv) {
 
   /* exec related stuff */
   fsrv->child_pid = -1;
-  fsrv->map_size = get_map_size() + (get_bb_map_size() + 7) / 8;
+  fsrv->map_size = get_map_size();
   fsrv->real_map_size = fsrv->map_size;
   fsrv->use_fauxsrv = false;
   fsrv->last_run_timed_out = false;
@@ -1921,7 +1921,7 @@ fsrv_run_result_t __attribute__((hot)) afl_fsrv_run_target(
 #ifdef __linux__
   if (likely(!fsrv->nyx_mode)) {
 
-    memset(fsrv->trace_bits, 0, fsrv->map_size);
+    memset(fsrv->trace_bits, 0, fsrv->map_size + (get_bb_map_size() + 7) / 8);
     MEM_BARRIER();
 
   }
