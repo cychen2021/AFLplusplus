@@ -22,6 +22,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <fcntl.h>
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -365,20 +366,89 @@ Function *ModuleSanitizerCoverageAFL::CreateInitCallsForSections(
 
 }
 
+static bool is_valid_integer(const std::string &str) {
+  if (str.empty()) return false;
+  
+  const char *p = str.c_str();
+  if (*p == '-' || *p == '+') p++;
+  
+  if (!*p) return false;
+  
+  while (*p) {
+    if (*p < '0' || *p > '9') return false;
+    p++;
+  }
+  
+  return true;
+}
+
+static int lock_file(const std::filesystem::path &path, uint32_t &count, bool write_mode = false) {
+  if (!std::filesystem::exists(path)) {
+    std::ofstream ofs(path);
+    ofs << 0;
+    ofs.close();
+  }
+  int fd = open(path.c_str(), O_CREAT | O_RDWR, 0644);
+  if (fd == -1) {
+    perror("open");
+    exit(1);
+  }
+  struct flock fl = {
+    .l_type = F_WRLCK,
+    .l_whence = SEEK_SET,
+    .l_start = 0,
+    .l_len = 0,
+    .l_pid = getpid(),
+  };
+  fcntl(fd, F_SETLKW, &fl);
+  if (write_mode) {
+    lseek(fd, 0, SEEK_SET);
+    ftruncate(fd, 0);
+    std::string content = std::to_string(count);
+    write(fd, content.c_str(), content.size());
+  } else {
+    std::string content;
+    content.resize(1024);
+    lseek(fd, 0, SEEK_SET);
+    ssize_t bytes_read = read(fd, &content[0], 1024);
+    if (bytes_read == -1) {
+      perror("read");
+      exit(1);
+    }
+    if (!is_valid_integer(content)) {
+      fprintf(stderr, "BB count is not a valid integer: %s\n", content.c_str());
+      exit(1);
+    }
+    count = std::stoi(content);
+  }
+  return fd;
+}
+
+static void write_bb_count(int fd, int count) {
+  std::string content = std::to_string(count);
+  lseek(fd, 0, SEEK_SET);
+  ftruncate(fd, 0);
+  write(fd, content.c_str(), content.size());
+}
+
+static void unlock_file(int fd) {
+  struct flock fl = {
+    .l_type = F_UNLCK,
+    .l_whence = SEEK_SET,
+    .l_start = 0,
+    .l_len = 0,
+    .l_pid = getpid(),
+  };
+  fcntl(fd, F_SETLK, &fl);
+  close(fd);
+}
+
 bool ModuleSanitizerCoverageAFL::instrumentModule(
     Module &M, DomTreeCallback DTCallback, PostDomTreeCallback PDTCallback) {
 
   std::filesystem::path bb_record = std::filesystem::temp_directory_path() / "bb_record";
 
-  if (std::filesystem::exists(bb_record)) {
-    std::ifstream ifs(bb_record);
-    std::string content;
-    std::getline(ifs, content);
-    bb_count = std::stoi(content);
-  } else {
-    std::ofstream ofs(bb_record);
-    ofs << 0;
-  }
+  int fd = lock_file(bb_record, bb_count);
 
   setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -530,8 +600,8 @@ bool ModuleSanitizerCoverageAFL::instrumentModule(
   }
 
   printf("BB count: %u\n", bb_count);
-  std::ofstream bb_record_ofs(bb_record);
-  bb_record_ofs << bb_count;
+  write_bb_count(fd, bb_count);
+  unlock_file(fd);
 
   const char* bb_loc_file = std::getenv("BB_LOC_FILE");
   bool use_stdout = bb_loc_file == nullptr || std::string(bb_loc_file) == "";

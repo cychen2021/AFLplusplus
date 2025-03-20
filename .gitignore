@@ -116,3 +116,4 @@ argv_fuzz_demo
 argv_fuzz_persistent_demo
 .cache/
 tmp/
+*.log
