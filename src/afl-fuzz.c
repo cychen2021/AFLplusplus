@@ -589,7 +589,9 @@ int main(int argc, char **argv_orig, char **envp) {
 
   if (get_afl_env("AFL_DEBUG")) { debug = afl->debug = 1; }
 
-  afl_state_init(afl, map_size);
+  uint32_t bb_map_size = get_bb_map_size();
+
+  afl_state_init(afl, map_size, (bb_map_size + 7) / 8);
   afl->debug = debug;
   afl_fsrv_init(&afl->fsrv);
   if (debug) { afl->fsrv.debug = true; }
@@ -2489,7 +2491,7 @@ int main(int argc, char **argv_orig, char **envp) {
 
   }
 
-  afl->bb_map_size = get_bb_map_size();
+  afl->bb_map_size = bb_map_size;
 
   afl->argv = use_argv;
   afl->fsrv.trace_bits =

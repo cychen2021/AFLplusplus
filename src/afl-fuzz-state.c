@@ -73,7 +73,7 @@ static list_t afl_states = {.element_prealloc_count = 0};
 
 /* Initializes an afl_state_t. */
 
-void afl_state_init(afl_state_t *afl, uint32_t map_size) {
+void afl_state_init(afl_state_t *afl, uint32_t map_size, uint32_t bb_map_size_in_byte) {
 
   /* thanks to this memset, growing vars like out_buf
   and out_size are NULL/0 by default. */
@@ -111,18 +111,19 @@ void afl_state_init(afl_state_t *afl, uint32_t map_size) {
   afl->cpu_aff = -1;                    /* Selected CPU core                */
 #endif                                                     /* HAVE_AFFINITY */
 
-  afl->virgin_bits = ck_alloc(map_size);
-  afl->virgin_tmout = ck_alloc(map_size);
-  afl->virgin_crash = ck_alloc(map_size);
-  afl->var_bytes = ck_alloc(map_size);
-  afl->top_rated = ck_alloc(map_size * sizeof(void *));
-  afl->clean_trace = ck_alloc(map_size);
-  afl->clean_trace_custom = ck_alloc(map_size);
-  afl->first_trace = ck_alloc(map_size);
-  afl->map_tmp_buf = ck_alloc(map_size);
+  uint32_t total_size = map_size + bb_map_size_in_byte;
+  afl->virgin_bits = ck_alloc(total_size);
+  afl->virgin_tmout = ck_alloc(total_size);
+  afl->virgin_crash = ck_alloc(total_size);
+  afl->var_bytes = ck_alloc(total_size);
+  afl->top_rated = ck_alloc(total_size * sizeof(void *));
+  afl->clean_trace = ck_alloc(total_size);
+  afl->clean_trace_custom = ck_alloc(total_size);
+  afl->first_trace = ck_alloc(total_size);
+  afl->map_tmp_buf = ck_alloc(total_size);
 
   afl->fsrv.use_stdin = 1;
-  afl->fsrv.map_size = map_size;
+  afl->fsrv.map_size = total_size;
   // afl_state_t is not available in forkserver.c
   afl->fsrv.afl_ptr = (void *)afl;
   afl->fsrv.add_extra_func = (void (*)(void *, u8 *, u32)) & add_extra;
