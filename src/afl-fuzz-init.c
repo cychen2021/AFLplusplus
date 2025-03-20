@@ -658,7 +658,7 @@ void read_foreign_testcases(afl_state_t *afl, int first) {
         afl->syncing_party = foreign_name;
         u32 bb_map_byte_size = (afl->bb_map_size + 7) / 8;
         assert(afl->bb_map_size > 0);
-        afl->queued_imported += save_if_interesting(afl, mem, len, afl->fsrv.trace_bits + (afl->fsrv.map_size - bb_map_byte_size), afl->bb_map_size, fault);
+        afl->queued_imported += save_if_interesting(afl, mem, len, afl->fsrv.trace_bits + afl->fsrv.map_size, afl->bb_map_size, fault);
         afl->syncing_party = 0;
         munmap(mem, st.st_size);
         close(fd);
