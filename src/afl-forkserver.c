@@ -252,7 +252,7 @@ void afl_fsrv_init(afl_forkserver_t *fsrv) {
 
   /* exec related stuff */
   fsrv->child_pid = -1;
-  fsrv->map_size = get_map_size();
+  fsrv->map_size = get_map_size() + (get_bb_map_size() + 7) / 8;
   fsrv->real_map_size = fsrv->map_size;
   fsrv->use_fauxsrv = false;
   fsrv->last_run_timed_out = false;
