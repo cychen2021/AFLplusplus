@@ -366,7 +366,9 @@ Function *ModuleSanitizerCoverageAFL::CreateInitCallsForSections(
 
 }
 
-static bool is_valid_integer(const std::string &str) {
+static bool is_valid_integer(const std::string &str_raw) {
+  std::string str = str_raw;
+  str.erase(str.find_last_not_of(" \t\n\r\f\v") + 1);
   if (str.empty()) return false;
   
   const char *p = str.c_str();
