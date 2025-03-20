@@ -367,8 +367,9 @@ Function *ModuleSanitizerCoverageAFL::CreateInitCallsForSections(
 }
 
 static bool is_valid_integer(const std::string &str_raw) {
-  std::string str = str_raw;
-  str.erase(str.find_last_not_of(" \t\n\r\f\v") + 1);
+  size_t pos = str_raw.find_last_not_of(" \t\n\r\f\v");
+  std::string str = str_raw.substr(0, pos + 1);
+  
   if (str.empty()) return false;
   
   const char *p = str.c_str();
@@ -410,9 +411,14 @@ static int lock_file(const std::filesystem::path &path, uint32_t &count, bool wr
     write(fd, content.c_str(), content.size());
   } else {
     std::string content;
-    content.resize(1024);
+    off_t filesize = lseek(fd, 0, SEEK_END);
+    if (filesize == -1) {
+      perror("lseek");
+      exit(1);
+    }
+    content.resize((size_t) filesize);
     lseek(fd, 0, SEEK_SET);
-    ssize_t bytes_read = read(fd, &content[0], 1024);
+    ssize_t bytes_read = read(fd, &content[0], filesize);
     if (bytes_read == -1) {
       perror("read");
       exit(1);
