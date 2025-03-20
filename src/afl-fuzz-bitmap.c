@@ -582,7 +582,8 @@ u8 __attribute__((hot)) save_if_interesting(afl_state_t *afl, void *mem,
 
     bb_fd = permissive_create(afl, bb_map_fn);
     if (likely(bb_fd >= 0)) {
-      ck_write(bb_fd, bb_map, bb_map_size, bb_map_fn);
+      uint32_t bb_map_size_in_bytes = (bb_map_size + 7) / 8;
+      ck_write(bb_fd, bb_map, bb_map_size_in_bytes, bb_map_fn);
     }
 
     add_to_queue(afl, queue_fn, len, 0);
