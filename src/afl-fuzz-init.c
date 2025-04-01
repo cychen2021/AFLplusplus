@@ -943,6 +943,16 @@ void perform_dry_run(afl_state_t *afl) {
     close(fd);
 
     res = calibrate_case(afl, q, use_mem, 0, 1);
+    
+    const u8 *bb_fn = strrchr(q->fname, '/') + 1;
+    const char *bb_map_fn = alloc_printf(
+        "%s/bbmap/%s", afl->out_dir, bb_fn);
+    s32 bb_fd = permissive_create(afl, bb_map_fn);
+    if (likely(bb_fd >= 0)) {
+      fprintf(stderr, "Writing bb map to %s\n", bb_map_fn);
+      uint32_t bb_map_size_in_bytes = (afl->bb_map_size + 7) / 8;
+      ck_write(bb_fd, afl->fsrv.trace_bits + afl->fsrv.map_size, bb_map_size_in_bytes, bb_map_fn);
+    }
 
     /* For AFLFast schedules we update the queue entry */
     if (unlikely(afl->schedule >= FAST && afl->schedule <= RARE) &&

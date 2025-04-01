@@ -476,15 +476,6 @@ u8 calibrate_case(afl_state_t *afl, struct queue_entry *q, u8 *use_mem,
     afl_fsrv_start(&afl->fsrv, afl->argv, &afl->stop_soon,
                    afl->afl_env.afl_debug_child);
     
-    const char *bb_map_fn = alloc_printf(
-        "%s/bbmap/%s", afl->out_dir, q->fname);
-    s32 bb_fd = permissive_create(afl, bb_map_fn);
-    if (likely(bb_fd >= 0)) {
-      uint32_t bb_map_size_in_bytes = (afl->bb_map_size + 7) / 8;
-      ck_write(bb_fd, afl->fsrv.trace_bits + afl->fsrv.map_size, bb_map_size_in_bytes, bb_map_fn);
-    }
-
-
     if (afl->fsrv.support_shmem_fuzz && !afl->fsrv.use_shmem_fuzz) {
 
       afl_shm_deinit(afl->shm_fuzz);
