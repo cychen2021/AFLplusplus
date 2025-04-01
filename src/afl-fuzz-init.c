@@ -656,7 +656,6 @@ void read_foreign_testcases(afl_state_t *afl, int first) {
         u32 len = write_to_testcase(afl, (void **)&mem, st.st_size, 1);
         fault = fuzz_run_target(afl, &afl->fsrv, afl->fsrv.exec_tmout);
         afl->syncing_party = foreign_name;
-        u32 bb_map_byte_size = (afl->bb_map_size + 7) / 8;
         assert(afl->bb_map_size > 0);
         afl->queued_imported += save_if_interesting(afl, mem, len, afl->fsrv.trace_bits + afl->fsrv.map_size, afl->bb_map_size, fault);
         afl->syncing_party = 0;
