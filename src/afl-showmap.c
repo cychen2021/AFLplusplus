@@ -252,6 +252,8 @@ static void analyze_results(afl_forkserver_t *fsrv) {
 
 }
 
+static bool show_distance = false;
+
 /* Write results. */
 
 static u32 write_results_to_file(afl_forkserver_t *fsrv, u8 *outfile) {
@@ -337,6 +339,12 @@ static u32 write_results_to_file(afl_forkserver_t *fsrv, u8 *outfile) {
 
       }
 
+    }
+
+    if (show_distance) {
+      unsigned long long sum = (*(unsigned long long*) (fsrv->trace_bits + map_size));
+      fprintf(f, "dist_sum:%llu\n", sum);
+      fprintf(f, "bb_num:%llu\n", (*(unsigned long long*) (fsrv->trace_bits + map_size + 8)));
     }
 
     fclose(f);
@@ -1081,6 +1089,10 @@ int main(int argc, char **argv_orig, char **envp) {
 
   // TODO: u64 mem_limit = MEM_LIMIT;                  /* Memory limit (MB) */
 
+  const char *show_distance_env = getenv("SHOW_DISTANCE");
+  if (show_distance_env != NULL && strcmp(show_distance_env, "1") == 0) {
+    show_distance = true;
+  }
   s32  opt, i;
   bool mem_limit_given = false, timeout_given = false, unicorn_mode = false,
        use_wine = false;
@@ -1401,7 +1413,11 @@ int main(int argc, char **argv_orig, char **envp) {
   fsrv->target_path = find_binary(argv[optind]);
 #endif
 
-  fsrv->trace_bits = afl_shm_init(&shm, map_size, 0);
+  if (show_distance) {
+    fsrv->trace_bits = afl_shm_init(&shm, map_size + 16, 0);
+  } else {
+    fsrv->trace_bits = afl_shm_init(&shm, map_size, 0);
+  }
 
   if (!quiet_mode) {
 
